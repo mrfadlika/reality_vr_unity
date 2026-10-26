@@ -1,0 +1,69 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/getCtrLoc",
+      "destination": "https://apps.globalhalalhub.co.id/global-halal-api/api/vr/getCtrLoc"
+    },
+    {
+      "source": "/api/getMasterBlock",
+      "destination": "https://apps.globalhalalhub.co.id/global-halal-api/api/vr/getMasterBlock"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*\\.unityweb)",
+      "headers": [
+        { "key": "Content-Encoding", "value": "gzip" }
+      ]
+    },
+    {
+      "source": "/(.*\\.wasm\\.unityweb)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/wasm" },
+        { "key": "Content-Encoding", "value": "gzip" }
+      ]
+    },
+    {
+      "source": "/(.*\\.data\\.unityweb)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/octet-stream" },
+        { "key": "Content-Encoding", "value": "gzip" }
+      ]
+    },
+    {
+      "source": "/(.*\\.framework\\.js\\.unityweb)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript" },
+        { "key": "Content-Encoding", "value": "gzip" }
+      ]
+    },
+    {
+      "source": "/(.*\\.wasm\\.gz)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/wasm" },
+        { "key": "Content-Encoding", "value": "gzip" }
+      ]
+    },
+    {
+      "source": "/(.*\\.data\\.gz)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/octet-stream" },
+        { "key": "Content-Encoding", "value": "gzip" }
+      ]
+    },
+    {
+      "source": "/(.*\\.js\\.gz)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript" },
+        { "key": "Content-Encoding", "value": "gzip" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}

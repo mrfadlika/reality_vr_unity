@@ -1,0 +1,16 @@
+<linker>
+  <!-- Preserve Physics engine classes so CharacterController and CapsuleCollider are never stripped in WebGL -->
+  <assembly fullname="UnityEngine">
+    <type fullname="UnityEngine.CapsuleCollider" preserve="all"/>
+    <type fullname="UnityEngine.CharacterController" preserve="all"/>
+    <type fullname="UnityEngine.BoxCollider" preserve="all"/>
+    <type fullname="UnityEngine.MeshCollider" preserve="all"/>
+    <type fullname="UnityEngine.SphereCollider" preserve="all"/>
+  </assembly>
+  
+  <assembly fullname="UnityEngine.PhysicsModule" preserve="all"/>
+  
+  <!-- Preserve URP Runtime, DecalProjector and DecalRendererFeature -->
+  <assembly fullname="Unity.RenderPipelines.Universal.Runtime" preserve="all"/>
+  <assembly fullname="Unity.RenderPipelines.Core.Runtime" preserve="all"/>
+</linker>

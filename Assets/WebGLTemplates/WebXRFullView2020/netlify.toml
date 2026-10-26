@@ -1,0 +1,58 @@
+[[redirects]]
+  from = "/api/getCtrLoc"
+  to = "https://apps.globalhalalhub.co.id/global-halal-api/api/vr/getCtrLoc"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/getMasterBlock"
+  to = "https://apps.globalhalalhub.co.id/global-halal-api/api/vr/getMasterBlock"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/Build/*.wasm.unityweb"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Content-Encoding = "gzip"
+
+[[headers]]
+  for = "/Build/*.data.unityweb"
+  [headers.values]
+    Content-Type = "application/octet-stream"
+    Content-Encoding = "gzip"
+
+[[headers]]
+  for = "/Build/*.framework.js.unityweb"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Content-Encoding = "gzip"
+
+[[headers]]
+  for = /Build/*.wasm.br
+  [headers.values]
+    Content-Type = application/wasm
+    Content-Encoding = br
+
+[[headers]]
+  for = /Build/*.data.br
+  [headers.values]
+    Content-Type = application/octet-stream
+    Content-Encoding = br
+
+[[headers]]
+  for = /Build/*.framework.js.br
+  [headers.values]
+    Content-Type = application/javascript
+    Content-Encoding = br
+
+[[headers]]
+  for = /Build/*.js.br
+  [headers.values]
+    Content-Type = application/javascript
+    Content-Encoding = br
+
+[[headers]]
+  for = /*
+  [headers.values]
+    Access-Control-Allow-Origin = *

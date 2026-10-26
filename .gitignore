@@ -1,0 +1,47 @@
+# Unity .gitignore
+# This .gitignore is configured so that when anyone clones the repository,
+# they can open it immediately in Unity with zero setup or missing files.
+
+# Unity temporary and generated folders
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+
+# Asset store tools and caches
+AssetStoreTools*
+
+# Visual Studio / VS Code / Rider IDE generated files
+.vs/
+.vscode/
+.idea/
+.gradle/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity Plastic SCM and Collab
+.plastic/
+sysinfo.txt
+
+# OS generated files
+.DS_Store*
+Thumbs.db
+Desktop.ini
