@@ -363,12 +363,6 @@
       dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
       frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
       codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
-#if MEMORY_FILENAME
-      memoryUrl: buildUrl + "/{{{ MEMORY_FILENAME }}}",
-#endif
-#if SYMBOLS_FILENAME
-      symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
-#endif
       streamingAssetsUrl: "StreamingAssets",
       companyName: "{{{ COMPANY_NAME }}}",
       productName: "{{{ PRODUCT_NAME }}}",
@@ -384,9 +378,6 @@
     var fullscreenButton = document.querySelector("#unity-fullscreen-button");
     var unityInstance = null;
 
-#if BACKGROUND_FILENAME
-    canvas.style.background = "url('" + buildUrl + "/{{{ BACKGROUND_FILENAME.replace(/'/g, '%27') }}}') center / cover";
-#endif
     loadingBar.style.display = "block";
 
     var script = document.createElement("script");
