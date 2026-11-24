@@ -2,19 +2,138 @@
 <html lang="en-us">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity WebGL Player | {{{ PRODUCT_NAME }}}</title>
+    <title>1eagle | Virtual Reality</title>
     <meta name="description" content="{{{ DESCRIPTION }}}">
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="icon" type="image/png" href="TemplateData/reality-eagle-logo.png">
     <link rel="stylesheet" href="TemplateData/style.css">
+    <!-- WebRTC PeerJS for Mobile VR Remote Sync (Offline & Local) -->
+    <script src="TemplateData/peerjs.min.js"></script>
+    <style>
+      @keyframes vrPulseGlow {
+        0% {
+          box-shadow: 0 0 15px rgba(56, 189, 248, 0.4), 0 10px 25px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          border-color: #38bdf8;
+        }
+        50% {
+          box-shadow: 0 0 30px rgba(56, 189, 248, 0.75), 0 12px 35px rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+          border-color: #7dd3fc;
+        }
+        100% {
+          box-shadow: 0 0 15px rgba(56, 189, 248, 0.4), 0 10px 25px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          border-color: #38bdf8;
+        }
+      }
+
+      /* Sembunyikan semua logo, link dan tombol bawaan footer secara global */
+      #unity-webgl-logo,
+      #unity-webxr-link,
+      #unity-build-title,
+      #enterar,
+      #unity-fullscreen-button {
+        display: none !important;
+      }
+
+      #unity-footer {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        pointer-events: none !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 0 !important;
+        line-height: 0 !important;
+        margin: 0 !important;
+      }
+
+      /* Di Desktop / Laptop: sembunyikan tombol entervr bawaan agar layar laptop 100% bersih */
+      #entervr {
+        display: none !important;
+      }
+
+      /* Di HP (Viewer Mode): tampilkan #entervr sebagai tombol Cardboard melayang yang keren */
+      .viewer-mode #entervr {
+        pointer-events: auto !important;
+        position: fixed !important;
+        bottom: 30px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 99999 !important;
+        width: auto !important;
+        min-width: 260px !important;
+        max-width: 92vw !important;
+        height: 52px !important;
+        padding: 0 24px !important;
+        font-size: 14px !important;
+        font-weight: 800 !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        letter-spacing: 0.6px !important;
+        border-radius: 50px !important;
+        border: 2px solid #38bdf8 !important;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #1e40af 100%) !important;
+        color: #ffffff !important;
+        cursor: pointer !important;
+        line-height: 48px !important;
+        text-align: center !important;
+        display: block !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+        overflow: hidden !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+        animation: vrPulseGlow 2.5s infinite ease-in-out !important;
+        transition: transform 0.15s ease, filter 0.15s ease !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      .viewer-mode #entervr:active {
+        transform: translateX(-50%) scale(0.96) !important;
+        filter: brightness(1.15) !important;
+      }
+      .viewer-mode #entervr:disabled {
+        background: #334155 !important;
+        border-color: #475569 !important;
+        color: #94a3b8 !important;
+        box-shadow: none !important;
+        cursor: not-allowed !important;
+        animation: none !important;
+      }
+
+      /* Custom Logo & Judul Reality Eagle di Layar Loading */
+      #unity-loading-bar {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        display: none;
+        text-align: center;
+      }
+      #unity-logo {
+        width: min(85vw, 300px) !important;
+        height: 82px !important;
+        margin: 0 auto 16px auto !important;
+        background: url('TemplateData/reality-eagle-logo.png') no-repeat center center !important;
+        background-size: contain !important;
+        filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5)) !important;
+      }
+      #unity-loading-title {
+        display: none !important;
+      }
+      #unity-progress-bar-empty {
+        margin: 0 auto !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+      }
+    </style>
   </head>
   <body>
     <div id="unity-container">
-      <div id="unity-canvas-container">
+      <div id="unity-canvas-container" style="width: 100%; height: 100%;">
         <canvas id="unity-canvas" style="width: 100%; height: 100%;"></canvas>
       </div>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
+        <div id="unity-loading-title">REALITY EAGLE</div>
         <div id="unity-progress-bar-empty">
           <div id="unity-progress-bar-full"></div>
         </div>
@@ -24,10 +143,50 @@
         <button id="entervr" value="Enter VR" disabled>VR</button>
         <button id="enterar" value="Enter AR" disabled>AR</button>
         <div id="unity-webxr-link">Using <a href="https://github.com/De-Panther/unity-webxr-export" target="_blank" title="WebXR Export">WebXR Export</a></div>
-        <div id="unity-build-title">{{{ PRODUCT_NAME }}}</div>
+        <div id="unity-build-title">1eagle | Virtual Reality</div>
+      </div>
+    </div>
+    <div id="gpu-warning-banner" style="display: none; position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 99999; max-width: 620px; width: 90%; background: rgba(24, 24, 27, 0.95); border: 1px solid #f59e0b; border-radius: 10px; padding: 14px 18px; color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+        <div style="display: flex; gap: 10px;">
+          <span style="font-size: 20px; line-height: 1;">⚠️</span>
+          <div>
+            <strong style="color: #fbbf24; font-size: 14px; display: block; margin-bottom: 4px;">Akselerasi Grafis (Hardware Acceleration) Tidak Aktif</strong>
+            <span>Browser Anda sedang menggunakan rendering software (CPU), sehingga visual 3D dapat terasa lambat/patah-patah. Untuk pengalaman mulus 60 FPS, aktifkan di:</span>
+            <div style="margin-top: 6px; padding: 6px 10px; background: rgba(0,0,0,0.35); border-radius: 6px; font-size: 12px; color: #e4e4e7;">
+              <b>Chrome / Edge:</b> Settings ➔ System ➔ Aktifkan <i>"Use graphics acceleration when available"</i> lalu restart browser.
+            </div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('gpu-warning-banner').style.display='none'" style="background: none; border: none; color: #a1a1aa; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;">✕</button>
       </div>
     </div>
     <script>
+      (function checkGpuAcceleration() {
+        try {
+          var testCanvas = document.createElement('canvas');
+          var gl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+          if (!gl) {
+            document.getElementById('gpu-warning-banner').style.display = 'block';
+            return;
+          }
+          var debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            var renderer = (gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '').toLowerCase();
+            if (renderer.includes('swiftshader') || 
+                renderer.includes('llvmpipe') || 
+                renderer.includes('software') || 
+                renderer.includes('basic render') ||
+                renderer.includes('microsoft basic') ||
+                (renderer.includes('mesa') && !renderer.includes('amd') && !renderer.includes('intel'))) {
+              document.getElementById('gpu-warning-banner').style.display = 'block';
+            }
+          }
+        } catch (e) {
+          console.warn('Gpu check error:', e);
+        }
+      })();
+
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
       var config = {
@@ -44,6 +203,7 @@
         companyName: "{{{ COMPANY_NAME }}}",
         productName: "{{{ PRODUCT_NAME }}}",
         productVersion: "{{{ PRODUCT_VERSION }}}",
+        devicePixelRatio: 1,
       };
 
       var container = document.querySelector("#unity-container");
@@ -55,8 +215,6 @@
       var unityInstance = null;
       {{{ WEBXR_POLYFILL_CONFIG }}}
 
-      canvasContainer.style.width = "{{{ WIDTH }}}px";
-      canvasContainer.style.height = "{{{ HEIGHT }}}px";
 #if BACKGROUND_FILENAME
       canvas.style.background = "url('" + buildUrl + "/{{{ BACKGROUND_FILENAME.replace(/'/g, '%27') }}}') center / cover";
 #endif
@@ -69,6 +227,13 @@
           progressBarFull.style.width = 100 * progress + "%";
         }).then((instance) => {
           unityInstance = instance;
+          try {
+            var currentUrl = window.location.origin + window.location.pathname;
+            unityInstance.SendMessage('VRRemoteSyncManager', 'SetFrontendUrl', currentUrl);
+            unityInstance.SendMessage('VRRemoteSyncManager', 'InitFromUrl', window.location.href);
+          } catch (e) {
+            console.warn('[VRRemote] SetFrontendUrl / InitFromUrl error:', e);
+          }
           loadingBar.style.display = "none";
           if (fullscreenButton)
           {
@@ -85,11 +250,21 @@
       let enterARButton = document.getElementById('enterar');
       let enterVRButton = document.getElementById('entervr');
 
+      var isViewerMode = (window.location.search && window.location.search.indexOf('role=viewer') !== -1) ||
+                         (window.location.href && window.location.href.indexOf('role=viewer') !== -1);
+      if (isViewerMode) {
+        document.body.classList.add('viewer-mode');
+        enterVRButton.textContent = '⏳ Memuat Mode VR...';
+      }
+
       document.addEventListener('onARSupportedCheck', function (event) {
         enterARButton.disabled = !event.detail.supported;
       }, false);
       document.addEventListener('onVRSupportedCheck', function (event) {
         enterVRButton.disabled = !event.detail.supported;
+        if (isViewerMode) {
+          enterVRButton.textContent = event.detail.supported ? '🥽 MASUK KE MODE VR (CARDBOARD)' : 'VR Tidak Didukung';
+        }
       }, false);
 
       enterARButton.addEventListener('click', function (event) {
@@ -97,7 +272,260 @@
       }, false);
       enterVRButton.addEventListener('click', function (event) {
         unityInstance.Module.WebXR.toggleVR();
+        try {
+          if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+            unityInstance.SendMessage('ViewModeManager', 'SwitchToWalkView');
+          }
+        } catch (e) {
+          console.warn('SwitchToWalkView notify error:', e);
+        }
       }, false);
+
+      // --- WebRTC Remote VR Bridge (Laptop Operator WASD <--> Mobile VR Headset Gyro) ---
+      var peerIceConfig = {
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun.cloudflare.com:3478' },
+            { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }
+          ]
+        }
+      };
+
+      window.vrRemote = {
+        peer: null,
+        conn: null,
+        isHost: false,
+        roomCode: '',
+        retryTimer: null,
+        broadcastChannel: (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('reality_eagle_vr_sync') : null,
+
+        startHost: function(requestedRoom) {
+          this.isHost = true;
+          var self = this;
+
+          if (this.peer) {
+            try { this.peer.destroy(); } catch (e) {}
+            this.peer = null;
+          }
+          if (this.conn) {
+            try { this.conn.close(); } catch (e) {}
+            this.conn = null;
+          }
+
+          // Gunakan ID dari Unity jika ada, atau buat ID unik berbasis waktu + random
+          var uniquePeerId = (requestedRoom && requestedRoom.length >= 4)
+            ? requestedRoom
+            : ('eagle-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6));
+          this.roomCode = uniquePeerId;
+
+          try {
+            this.peer = new Peer(uniquePeerId, peerIceConfig);
+
+            this.peer.on('open', function(id) {
+              console.log('[VRRemote] Host SUKSES terdaftar di server dengan Peer ID:', id);
+              self.roomCode = id;
+              if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                unityInstance.SendMessage('VRRemoteSyncManager', 'OnHostPeerReady', id);
+              }
+            });
+
+            this.peer.on('connection', function(c) {
+              console.log('[VRRemote] Viewer tersambung ke Host!');
+              self.conn = c;
+
+              function onHostConnOpen() {
+                console.log('[VRRemote] DataChannel Host <--> Viewer TERBUKA!');
+                if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                  unityInstance.SendMessage('VRRemoteSyncManager', 'OnClientConnected', c.peer);
+                }
+              }
+
+              if (c.open) {
+                onHostConnOpen();
+              } else {
+                c.on('open', onHostConnOpen);
+              }
+
+              // Terima paket orientasi kepala (Head Tracking) dari HP VR
+              c.on('data', function(data) {
+                if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                  unityInstance.SendMessage('VRRemoteSyncManager', 'OnHeadPacketReceived', data);
+                }
+              });
+
+              c.on('close', function() {
+                console.log('[VRRemote] Viewer terputus.');
+                self.conn = null;
+                if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                  unityInstance.SendMessage('VRRemoteSyncManager', 'OnClientDisconnected', '');
+                }
+              });
+
+              c.on('error', function(err) {
+                console.warn('[VRRemote] Host DataChannel error:', err);
+              });
+            });
+
+            this.peer.on('error', function(err) {
+              console.warn('[VRRemote] Host peer error:', err);
+              if (err.type === 'unavailable-id') {
+                setTimeout(function() { self.startHost(); }, 800);
+              }
+            });
+          } catch (e) {
+            console.warn('[VRRemote] PeerJS startHost error:', e);
+          }
+
+          // Local BroadcastChannel listener (untuk testing 2 tab di laptop yang sama)
+          if (this.broadcastChannel) {
+            this.broadcastChannel.onmessage = function(ev) {
+              if (ev.data && ev.data.room === self.roomCode) {
+                if (ev.data.type === 'join') {
+                  if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                    unityInstance.SendMessage('VRRemoteSyncManager', 'OnClientConnected', 'local-tab');
+                  }
+                } else if (ev.data.type === 'head') {
+                  if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                    unityInstance.SendMessage('VRRemoteSyncManager', 'OnHeadPacketReceived', ev.data.packet);
+                  }
+                }
+              }
+            };
+          }
+        },
+
+        connectViewer: function(roomCode) {
+          this.isHost = false;
+          this.roomCode = roomCode;
+          var self = this;
+          var hostPeerId = roomCode;
+
+          if (this.retryTimer) {
+            clearInterval(this.retryTimer);
+            this.retryTimer = null;
+          }
+
+          if (this.peer) {
+            try { this.peer.destroy(); } catch (e) {}
+            this.peer = null;
+          }
+          if (this.conn) {
+            try { this.conn.close(); } catch (e) {}
+            this.conn = null;
+          }
+
+          function doConnect() {
+            if (self.conn && self.conn.open) return;
+            if (!self.peer || self.peer.destroyed || !self.peer.open) return;
+
+            if (self.conn) {
+              try { self.conn.close(); } catch (e) {}
+              self.conn = null;
+            }
+
+            console.log('[VRRemote] Viewer mencoba koneksi ke Host:', hostPeerId);
+            try {
+              var c = self.peer.connect(hostPeerId, { reliable: true });
+              self.conn = c;
+
+              function onViewerConnOpen() {
+                console.log('[VRRemote] DataChannel dengan Laptop BERHASIL TERHUBUNG!');
+                if (self.retryTimer) {
+                  clearInterval(self.retryTimer);
+                  self.retryTimer = null;
+                }
+                if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                  unityInstance.SendMessage('VRRemoteSyncManager', 'OnConnectedToHost', hostPeerId);
+                }
+              }
+
+              if (c.open) {
+                onViewerConnOpen();
+              } else {
+                c.on('open', onViewerConnOpen);
+              }
+
+              c.on('data', function(data) {
+                if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                  unityInstance.SendMessage('VRRemoteSyncManager', 'OnMovementPacketReceived', data);
+                }
+              });
+
+              c.on('close', function() {
+                console.log('[VRRemote] Koneksi ke Laptop terputus.');
+                self.conn = null;
+                if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                  unityInstance.SendMessage('VRRemoteSyncManager', 'OnDisconnectedFromHost', '');
+                }
+              });
+
+              c.on('error', function(err) {
+                console.warn('[VRRemote] Viewer connection error:', err);
+                self.conn = null;
+              });
+            } catch (e) {
+              console.warn('[VRRemote] doConnect error:', e);
+            }
+          }
+
+          try {
+            this.peer = new Peer(peerIceConfig);
+            this.peer.on('open', function(id) {
+              console.log('[VRRemote] Viewer peer aktif dengan ID:', id);
+              doConnect();
+
+              // Auto-retry setiap 2 detik jika koneksi belum terbuka (misal Host baru mendaftar)
+              if (!self.retryTimer) {
+                self.retryTimer = setInterval(function() {
+                  if (!self.conn || !self.conn.open) {
+                    doConnect();
+                  } else {
+                    clearInterval(self.retryTimer);
+                    self.retryTimer = null;
+                  }
+                }, 2000);
+              }
+            });
+
+            this.peer.on('error', function(err) {
+              console.warn('[VRRemote] Viewer peer error:', err);
+              if (err.type === 'peer-unavailable') {
+                if (self.conn) {
+                  try { self.conn.close(); } catch (e) {}
+                  self.conn = null;
+                }
+              }
+            });
+          } catch (e) {
+            console.warn('[VRRemote] Viewer connect error:', e);
+          }
+
+          // Local BroadcastChannel (untuk testing 2 tab di PC yang sama)
+          if (this.broadcastChannel) {
+            this.broadcastChannel.postMessage({ type: 'join', room: roomCode });
+            this.broadcastChannel.onmessage = function(ev) {
+              if (ev.data && ev.data.type === 'move' && ev.data.room === roomCode) {
+                if (unityInstance && typeof unityInstance.SendMessage === 'function') {
+                  unityInstance.SendMessage('VRRemoteSyncManager', 'OnMovementPacketReceived', ev.data.packet);
+                }
+              }
+            };
+          }
+        },
+
+        sendMovement: function(dataStr) {
+          if (this.conn && this.conn.open) {
+            this.conn.send(dataStr);
+          }
+          if (this.broadcastChannel) {
+            var msgType = this.isHost ? 'move' : 'head';
+            this.broadcastChannel.postMessage({ type: msgType, room: this.roomCode, packet: dataStr });
+          }
+        }
+      };
     </script>
   </body>
 </html>

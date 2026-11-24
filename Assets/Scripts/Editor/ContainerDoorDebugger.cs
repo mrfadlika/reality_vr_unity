@@ -46,6 +46,7 @@ public static class ContainerDoorDebugger
             }
 
             cm.AddContainerMarkings(go, localBounds, iso, tare);
+            cm.AddContainerSideMarkings(go, localBounds, iso, tare);
             refreshedCount++;
         }
 

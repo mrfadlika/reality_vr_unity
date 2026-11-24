@@ -8,7 +8,6 @@ public class WebGLTextureOptimizer
     {
         string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets" });
         int count = 0;
-        long beforeCount = 0;
 
         AssetDatabase.StartAssetEditing();
         try

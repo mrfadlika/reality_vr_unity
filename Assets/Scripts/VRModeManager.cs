@@ -2,12 +2,19 @@ using UnityEngine;
 
 public class VRModeManager : MonoBehaviour
 {
+    public static VRModeManager Instance { get; private set; }
+
     public Camera leftCamera;
     public Camera rightCamera;
 
     [Header("VR Case Settings")]
     public bool isSplitScreenVR = false;
     public float ipd = 0.064f; // Interpupillary distance (64mm)
+
+    void Awake()
+    {
+        if (Instance == null) Instance = this;
+    }
 
     void Start()
     {

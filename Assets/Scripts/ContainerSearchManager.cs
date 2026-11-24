@@ -470,29 +470,80 @@ public class ContainerSearchManager : MonoBehaviour
             return;
         }
 
-        query = query.Trim().ToUpper();
+        query = query.Trim().ToUpper().Replace(" ", "").Replace("-", "");
         searchQuery = query;
 
-        // Search inside ContainerManager
-        ContainerManager cm = Object.FindFirstObjectByType<ContainerManager>();
-        if (cm == null) return;
-
-        // Find match in scene objects
         GameObject matchedGo = null;
 
-        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+        // 1. Cari di database YardEditorManager (Scene Copy)
+        if (YardEditorManager.Instance != null)
         {
-            if (go.name.ToUpper().Contains(query))
+            var spawned = YardEditorManager.Instance.GetSpawnedContainerInfo();
+            if (spawned != null)
             {
-                matchedGo = go;
-                break;
+                foreach (var kvp in spawned)
+                {
+                    if (kvp.Key != null && kvp.Value != null)
+                    {
+                        string cleanNo = (kvp.Value.CTR_NO ?? "").ToUpper().Replace(" ", "").Replace("-", "");
+                        if (cleanNo.Contains(query) || kvp.Key.name.ToUpper().Replace(" ", "").Contains(query))
+                        {
+                            matchedGo = kvp.Key;
+                            YardEditorManager.Instance.SelectContainerForInfo(kvp.Key, kvp.Value);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Cari di database ContainerManager (Scene SampleScene)
+        if (matchedGo == null)
+        {
+            ContainerManager cm = Object.FindFirstObjectByType<ContainerManager>();
+            if (cm != null)
+            {
+                var db = cm.GetContainerDatabase();
+                if (db != null)
+                {
+                    foreach (var kvp in db)
+                    {
+                        if (kvp.Key != null && kvp.Value != null)
+                        {
+                            string cleanNo = (kvp.Value.CTR_NO ?? "").ToUpper().Replace(" ", "").Replace("-", "");
+                            if (cleanNo.Contains(query) || kvp.Key.name.ToUpper().Replace(" ", "").Contains(query))
+                            {
+                                matchedGo = kvp.Key;
+                                cm.SelectContainer(kvp.Key);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Fallback: Cari di seluruh GameObject aktif di scene
+        if (matchedGo == null)
+        {
+            foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+            {
+                if (go != null && go.activeInHierarchy)
+                {
+                    string cleanName = go.name.ToUpper().Replace(" ", "").Replace("-", "");
+                    if (cleanName.Contains(query) && (cleanName.Contains("FT") || go.GetComponent<Renderer>() != null))
+                    {
+                        matchedGo = go;
+                        break;
+                    }
+                }
             }
         }
 
         if (matchedGo != null)
         {
             currentTargetContainer = matchedGo;
-            Debug.Log("Found Container: " + matchedGo.name);
+            Debug.Log("[ContainerSearchManager] Found Container: " + matchedGo.name);
 
             // Focus Camera on center of container
             ContainerOrientedBounds ob = GetContainerOrientedBounds(matchedGo);
@@ -500,7 +551,7 @@ public class ContainerSearchManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Container not found for query: " + query);
+            Debug.LogWarning("[ContainerSearchManager] Container not found for query: " + query);
         }
     }
 
@@ -702,6 +753,14 @@ public class ContainerSearchManager : MonoBehaviour
 
     void OnGUI()
     {
+        // Sembunyikan Search Bar saat di HP (Viewer Mode) agar layar VR kacamata bersih
+        if (VRRemoteSyncManager.Instance != null && VRRemoteSyncManager.Instance.isViewer)
+            return;
+
+        // Sembunyikan Search Bar saat mode edit layout Yard Editor sedang aktif
+        if (YardEditorManager.Instance != null && YardEditorManager.Instance.IsEditorActive())
+            return;
+
         float barWidth = barSize.x;
         float barHeight = barSize.y;
         float x = (Screen.width - barWidth) / 2f;

@@ -17,6 +17,10 @@ public class OrbitCamera : MonoBehaviour
     private Vector3 targetPos;
     private bool isInitialized = false;
 
+    // State interaksi mouse kamera 3D
+    private bool isOrbiting = false;  // Putar sudut pandang (Klik Kanan Drag atau Alt + Klik Kiri Drag)
+    private bool isPanning = false;   // Geser posisi kamera sejajar tanah (Klik Kiri Drag atau Klik Tengah Drag)
+
     void Start()
     {
         Vector3 euler = transform.eulerAngles;
@@ -68,12 +72,62 @@ public class OrbitCamera : MonoBehaviour
         bool isOverUI = VRPlayerController.IsPointerOverAnyUI();
         bool isDraggingInEditor = YardEditorManager.Instance != null && YardEditorManager.Instance.IsDraggingAnything();
 
-        // 1. Mouse Drag -> Putar Rotasi Drone Camera (Pitch & Yaw Look Around)
-        if (!isOverUI && !isDraggingInEditor && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+        // 1. Inisialisasi Drag Mouse saat pertama kali ditekan (Hanya cek isOverUI saat tombol ditekan agar gerakan tidak terputus saat melintasi UI)
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
+        {
+            if (!isOverUI && !isDraggingInEditor)
+            {
+                if (Input.GetMouseButtonDown(1) || (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftAlt)))
+                {
+                    isOrbiting = true;
+                }
+                else if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(2))
+                {
+                    isPanning = true;
+                }
+            }
+        }
+
+        // Lepas state drag saat tombol mouse dilepaskan
+        if (!Input.GetMouseButton(1) && !(Input.GetMouseButton(0) && Input.GetKey(KeyCode.LeftAlt)))
+        {
+            isOrbiting = false;
+        }
+        if (!Input.GetMouseButton(0) && !Input.GetMouseButton(2))
+        {
+            isPanning = false;
+        }
+
+        // 2. Putar Sudut Pandang Kamera (Orbit / Look Around) — Klik Kanan Drag atau Alt + Klik Kiri Drag
+        if (isOrbiting)
         {
             targetYaw += Input.GetAxis("Mouse X") * lookSensitivity;
             targetPitch -= Input.GetAxis("Mouse Y") * lookSensitivity;
             targetPitch = Mathf.Clamp(targetPitch, -85f, 85f);
+        }
+
+        // 3. Geser Posisi Kamera (Pan) — Klik Kiri Drag atau Klik Tengah Drag
+        if (isPanning && !isOrbiting)
+        {
+            float deltaX = Input.GetAxis("Mouse X");
+            float deltaY = Input.GetAxis("Mouse Y");
+
+            if (Mathf.Abs(deltaX) > 0.0001f || Mathf.Abs(deltaY) > 0.0001f)
+            {
+                // Kecepatan geser proporsional terhadap ketinggian kamera dari tanah
+                float currentHeight = Mathf.Max(5f, transform.position.y - 19.81f);
+                float panFactor = currentHeight * 0.045f;
+
+                Vector3 camRight = transform.right;
+                Vector3 camForward = transform.forward;
+                camRight.y = 0f;
+                camForward.y = 0f;
+                camRight.Normalize();
+                camForward.Normalize();
+
+                Vector3 panDelta = (-camRight * deltaX - camForward * deltaY) * panFactor;
+                targetPos += panDelta;
+            }
         }
 
         // Haluskan rotasi dengan interpolasi mulus (Mencegah patah-patah di WebGL)

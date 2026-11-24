@@ -34,6 +34,8 @@ public class ViewModeManager : MonoBehaviour
     public Texture2D icon2DView;
     [Tooltip("Tarik gambar PNG untuk tombol Walk View")]
     public Texture2D iconWalkView;
+    [Tooltip("Tarik gambar PNG untuk tombol Hubungkan HP VR")]
+    public Texture2D iconConnectVR;
 
     [Header("uGUI Canvas Buttons (Jika menggunakan Canvas UI Button)")]
     [Tooltip("Tarik objek Button 3D View dari Hierarchy/Canvas ke sini")]
@@ -111,6 +113,12 @@ public class ViewModeManager : MonoBehaviour
 
         // Switch to default mode
         SetViewMode(currentMode);
+
+        // Teruskan gambar tombol Hubungkan HP ke VRRemoteSyncManager
+        if (iconConnectVR != null && VRRemoteSyncManager.Instance != null)
+        {
+            VRRemoteSyncManager.Instance.buttonConnectImage = iconConnectVR;
+        }
     }
 
     void SetupCameras()
@@ -171,14 +179,17 @@ public class ViewModeManager : MonoBehaviour
             }
         }
 
-        // Fallback: Jika tidak ada YardBoundary, ambil seluruh MeshRenderer di scene (kontainer, tanah, dll)
+        // Fallback: Jika tidak ada YardBoundary, ambil seluruh MeshRenderer di scene (kontainer, tanah vr-env, dll)
         if (allYardRends.Count == 0)
         {
             MeshRenderer[] rends = Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None);
             foreach (var r in rends)
             {
-                string rName = r.gameObject.name;
-                if (!rName.Contains("Indicator") && !rName.Contains("Pointer") && !rName.Contains("Tag"))
+                if (r == null) continue;
+                string rName = r.gameObject.name.ToLower();
+                if (!rName.Contains("indicator") && !rName.Contains("pointer") && !rName.Contains("tag") &&
+                    !rName.Contains("plane") && !rName.Contains("laut") && !rName.Contains("sea") &&
+                    !rName.Contains("water") && !rName.Contains("ocean"))
                 {
                     allYardRends.Add(r);
                 }
@@ -471,6 +482,10 @@ public class ViewModeManager : MonoBehaviour
 
     void OnGUI()
     {
+        // Sembunyikan semua tombol saat di HP (Viewer Mode) agar layar VR kacamata bersih
+        if (VRRemoteSyncManager.Instance != null && VRRemoteSyncManager.Instance.isViewer)
+            return;
+
         // 1. Jika user sudah memasang UI Button dari Canvas, sembunyikan OnGUI sepenuhnya
         if (button3DView != null || button2DView != null || buttonWalkView != null)
             return;

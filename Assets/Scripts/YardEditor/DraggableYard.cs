@@ -18,8 +18,8 @@ public class DraggableYard : MonoBehaviour
     public int maxTier = 7;
 
     [Header("Visual Feedback")]
-    public Color normalColor = new Color(0.4f, 0.4f, 0.4f, 1f);
-    public Color selectedColor = new Color(1f, 0.92f, 0.2f, 1f);
+    public Color normalColor = new Color(0.50f, 0.52f, 0.54f, 1f);
+    public Color selectedColor = new Color(0.35f, 0.75f, 1f, 1f); // Highlight biru muda di editor agar tidak tertukar dengan warna lantai
     public Color draggingColor = new Color(0.2f, 0.9f, 0.4f, 1f);
 
     // State
@@ -27,7 +27,7 @@ public class DraggableYard : MonoBehaviour
     [HideInInspector] public bool isDragging = false;
 
     private Vector3 dragOffset;
-    private float groundY = 19.0f;
+    private float groundY = 19.81f;
     private Renderer[] allRenderers;
     private Color[] originalColors;
     private Material[] highlightMaterials;
@@ -40,21 +40,31 @@ public class DraggableYard : MonoBehaviour
         SetupRenderers();
         CreateLabel();
         FindGroundY();
+        if (transform.position.y < 19.5f || transform.position.y > 19.95f)
+        {
+            Vector3 pos = transform.position;
+            pos.y = groundY;
+            transform.position = pos;
+        }
+    }
+
+    void Update()
+    {
+        bool inEditor = YardEditorManager.Instance != null && YardEditorManager.Instance.isEditorActive;
+        if (!inEditor && isSelected)
+        {
+            Deselect();
+        }
     }
 
     void FindGroundY()
     {
-        if (YardEditorManager.Instance != null)
+        if (YardEditorManager.Instance != null && YardEditorManager.Instance.groundY > 19.5f && YardEditorManager.Instance.groundY < 19.95f)
         {
             groundY = YardEditorManager.Instance.groundY;
             return;
         }
-        GameObject vrEnv = GameObject.Find("vr-env");
-        if (vrEnv != null)
-        {
-            Renderer rend = vrEnv.GetComponentInChildren<Renderer>();
-            if (rend != null) groundY = rend.bounds.max.y;
-        }
+        groundY = 19.81f;
     }
 
     void SetupRenderers()

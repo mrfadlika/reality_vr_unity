@@ -55,6 +55,15 @@ public class WebGLPostProcessBuild
             Debug.Log("[WebGLPostProcessBuild] Copied vercel.json to build output.");
         }
 
+        // 5. Copy _worker.js (Cloudflare Pages Worker untuk penyimpanan /data/denah.json lintas perangkat & proxy API)
+        string workerSrc = Path.Combine(templateDir, "_worker.js");
+        string workerDst = Path.Combine(pathToBuiltProject, "_worker.js");
+        if (File.Exists(workerSrc))
+        {
+            File.Copy(workerSrc, workerDst, true);
+            Debug.Log("[WebGLPostProcessBuild] Copied _worker.js to build output.");
+        }
+
         Debug.Log("[WebGLPostProcessBuild] Post-process completed successfully. Build is ready for Netlify / Vercel / Cloudflare!");
     }
 }

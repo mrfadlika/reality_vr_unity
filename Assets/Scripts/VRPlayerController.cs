@@ -181,6 +181,12 @@ public class VRPlayerController : MonoBehaviour
         return false;
     }
 
+    public void SetExternalLookAngles(float pitch, float yaw)
+    {
+        mouseY = pitch;
+        mouseX = yaw;
+    }
+
     void Update()
     {
         if (ViewModeManager.Instance != null && ViewModeManager.Instance.currentMode != CameraViewMode.VRView)
@@ -206,11 +212,20 @@ public class VRPlayerController : MonoBehaviour
 
         bool isXRActive = UnityEngine.XR.XRSettings.isDeviceActive;
 
-        // 2. First-Person Mouse Look
+        // 2. First-Person Mouse Look (atau Sinkronisasi dari HP VR Remote)
         bool isCursorLocked = (Cursor.lockState == CursorLockMode.Locked);
         bool isDraggingMouse = (Input.GetMouseButton(0) || Input.GetMouseButton(1)) && !isOverUI;
 
-        if (isCursorLocked || isDraggingMouse)
+        bool isControlledByRemoteVR = (VRRemoteSyncManager.Instance != null &&
+                                       VRRemoteSyncManager.Instance.isHost &&
+                                       VRRemoteSyncManager.Instance.isConnected &&
+                                       VRRemoteSyncManager.Instance.hasReceivedHeadPacket);
+
+        if (isControlledByRemoteVR && !isCursorLocked && !isDraggingMouse)
+        {
+            // Jika HP VR aktif, orientasi kamera dikendalikan langsung oleh gerakan kepala HP di VRRemoteSyncManager
+        }
+        else if (isCursorLocked || isDraggingMouse)
         {
             mouseX += Input.GetAxis("Mouse X") * mouseSensitivity;
             mouseY -= Input.GetAxis("Mouse Y") * mouseSensitivity;
@@ -376,6 +391,10 @@ public class VRPlayerController : MonoBehaviour
     void OnGUI()
     {
         if (ViewModeManager.Instance != null && ViewModeManager.Instance.currentMode != CameraViewMode.VRView)
+            return;
+
+        // Sembunyikan semua petunjuk keyboard jika sedang berjalan sebagai Viewer di HP
+        if (VRRemoteSyncManager.Instance != null && VRRemoteSyncManager.Instance.isViewer)
             return;
 
         bool isXRActive = UnityEngine.XR.XRSettings.isDeviceActive;

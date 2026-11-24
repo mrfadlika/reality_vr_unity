@@ -26,7 +26,7 @@ public class DraggableRoad : MonoBehaviour
     [HideInInspector] public bool isDragging = false;
 
     private Vector3 dragOffset;
-    private float groundY = 19.0f;
+    private float groundY = 19.81f;
 
     // Visual components
     private GameObject roadSurface;
@@ -40,25 +40,45 @@ public class DraggableRoad : MonoBehaviour
     void Start()
     {
         FindGroundY();
-        BuildRoadVisual();
+        if (transform.position.y < 19.5f || transform.position.y > 19.95f)
+        {
+            Vector3 pos = transform.position;
+            pos.y = groundY;
+            transform.position = pos;
+        }
+        if (roadSurface == null && transform.childCount == 0)
+        {
+            BuildRoadVisual();
+        }
+    }
+
+    void Update()
+    {
+        // Sembunyikan label teks & tanda panah saat keluar dari mode Yard Editor (misal di 3D View atau Walk View)
+        bool inEditor = YardEditorManager.Instance != null && YardEditorManager.Instance.isEditorActive;
+        if (!inEditor && isSelected)
+        {
+            Deselect();
+        }
+        if (labelObj != null && labelObj.activeSelf != inEditor)
+        {
+            labelObj.SetActive(inEditor);
+        }
+        if (arrowIndicator != null && arrowIndicator.activeSelf != inEditor)
+        {
+            arrowIndicator.SetActive(inEditor);
+        }
     }
 
     void FindGroundY()
     {
-        if (YardEditorManager.Instance != null)
+        if (YardEditorManager.Instance != null && YardEditorManager.Instance.groundY > 19.5f && YardEditorManager.Instance.groundY < 19.95f)
         {
             groundY = YardEditorManager.Instance.groundY;
             return;
         }
-        GameObject vrEnv = GameObject.Find("vr-env");
-        if (vrEnv != null)
-        {
-            Renderer rend = vrEnv.GetComponentInChildren<Renderer>();
-            if (rend != null) groundY = rend.bounds.max.y;
-        }
+        groundY = 19.81f;
     }
-
-    // --- Build Visual ---
 
     // --- Build Visual ---
 
@@ -67,42 +87,85 @@ public class DraggableRoad : MonoBehaviour
         // Cleanup existing
         ClearChildren();
 
-        float roadThickness = 0.4f; // Menempel presisi di permukaan
+        float roadThickness = 0.20f; // Tebal 20cm solid slab aspal agar berdiri kokoh di atas paving vr-env dan tidak tenggelam di bawah lantai
 
-        // 1. Road surface (solid 3D Dark Asphalt Cube)
-        roadSurface = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        roadSurface.name = "RoadSurface";
-        roadSurface.transform.SetParent(transform);
-        roadSurface.transform.localPosition = new Vector3(0, roadThickness / 2f, 0);
-        roadSurface.transform.localRotation = Quaternion.identity;
-        roadSurface.transform.localScale = new Vector3(roadWidth, roadThickness, roadLength);
-
-        // Material aspal gelap
-        roadMaterial = CreateRoadMaterial();
-        Renderer surfaceRend = roadSurface.GetComponent<Renderer>();
-        if (surfaceRend != null) surfaceRend.sharedMaterial = roadMaterial;
-
-        // Clean child collider
-        Collider childCol = roadSurface.GetComponent<Collider>();
-        if (childCol != null) DestroyImmediate(childCol);
-
-        // Add root BoxCollider for 100% click & drag detection
+        // 0. Pasang BoxCollider utama di root object LEBIH DULU agar raycast click & drag 100% selalu berfungsi di Build maupun Editor
         BoxCollider rootCol = GetComponent<BoxCollider>();
         if (rootCol == null) rootCol = gameObject.AddComponent<BoxCollider>();
         rootCol.center = new Vector3(0, roadThickness / 2f + 0.5f, 0);
-        rootCol.size = new Vector3(roadWidth, 2.0f, roadLength);
+        rootCol.size = new Vector3(roadWidth, 2.5f, roadLength);
+        rootCol.isTrigger = true;
 
-        // 2. Yellow side edge lines
-        CreateYellowEdgeMarkings(roadThickness);
+        GameObject customRoadPrefab = YardEditorManager.Instance != null ? YardEditorManager.Instance.roadPrefab : null;
+        if (customRoadPrefab != null)
+        {
+            GameObject instance = Instantiate(customRoadPrefab, transform);
+            instance.name = "CustomRoadModel";
+            instance.transform.localPosition = new Vector3(0, 0.02f, 0);
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = new Vector3(roadWidth, 1f, roadLength);
 
-        // 3. Dashed center line
-        CreateDashedLine(roadThickness);
+            foreach (Camera c in instance.GetComponentsInChildren<Camera>(true))
+            {
+                if (Application.isPlaying) Destroy(c.gameObject);
+                else DestroyImmediate(c.gameObject);
+            }
+            foreach (Light l in instance.GetComponentsInChildren<Light>(true))
+            {
+                if (Application.isPlaying) Destroy(l.gameObject);
+                else DestroyImmediate(l.gameObject);
+            }
+        }
+        else
+        {
+            // 1. Road surface (solid 3D Dark Asphalt Cube)
+            roadSurface = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            roadSurface.name = "RoadSurface";
+            roadSurface.transform.SetParent(transform);
+            roadSurface.transform.localPosition = new Vector3(0, roadThickness / 2f, 0);
+            roadSurface.transform.localRotation = Quaternion.identity;
+            roadSurface.transform.localScale = new Vector3(roadWidth, roadThickness, roadLength);
+
+            // Simpan default shader dari primitive Cube sebelum diganti materialnya (dijamin selalu valid di WebGL/Standalone build)
+            Renderer surfaceRend = roadSurface.GetComponent<Renderer>();
+            if (surfaceRend != null && surfaceRend.sharedMaterial != null && fallbackPrimitiveShader == null)
+            {
+                fallbackPrimitiveShader = surfaceRend.sharedMaterial.shader;
+            }
+
+            // Material aspal gelap
+            roadMaterial = (YardEditorManager.Instance != null && YardEditorManager.Instance.roadMaterial != null)
+                ? new Material(YardEditorManager.Instance.roadMaterial)
+                : CreateRoadMaterial();
+            if (surfaceRend != null) surfaceRend.sharedMaterial = roadMaterial;
+
+            // Jadikan collider child sebagai trigger juga (bukan di-destroy) agar raycast klik di Build 100% mengenai jalan
+            Collider childCol = roadSurface.GetComponent<Collider>();
+            if (childCol != null) childCol.isTrigger = true;
+
+            // 2. Yellow side edge lines tidak diperlukan pada jalan (sesuai permintaan: "jalan itu gak perlu yellowedgemarking")
+            // Hanya gunakan aspal gelap polos dengan garis marka putus-putus putih di tengah
+
+            // 3. Dashed center line
+            CreateDashedLine(roadThickness);
+        }
 
         // 4. Directional arrow
         CreateArrow(roadThickness);
 
         // 5. Label
         CreateLabel(roadThickness);
+
+        // Terapkan warna sesuai status seleksi saat ini
+        if (isDragging) ApplyColorToSurface(draggingColor);
+        else if (isSelected) ApplyColorToSurface(selectedColor);
+        else ApplyColorToSurface(normalColor);
+
+        bool inEditor = YardEditorManager.Instance != null && YardEditorManager.Instance.isEditorActive;
+        if (labelObj != null) labelObj.SetActive(inEditor);
+        if (arrowIndicator != null) arrowIndicator.SetActive(inEditor);
+
+        Physics.SyncTransforms();
     }
 
     void ClearChildren()
@@ -110,26 +173,66 @@ public class DraggableRoad : MonoBehaviour
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             GameObject child = transform.GetChild(i).gameObject;
+            child.SetActive(false);
             if (Application.isPlaying) Destroy(child);
             else DestroyImmediate(child);
         }
     }
 
-    Material CreateRoadMaterial()
+    private static Shader fallbackPrimitiveShader;
+
+    Shader GetSafeRoadShader(bool preferUnlit)
     {
-        Shader s = Shader.Find("Universal Render Pipeline/Lit");
+        Shader s = null;
+        if (preferUnlit)
+        {
+            s = Shader.Find("Universal Render Pipeline/Unlit");
+            if (s == null) s = Shader.Find("Sprites/Default");
+            if (s == null) s = Shader.Find("Unlit/Color");
+        }
+        if (s == null) s = Shader.Find("Universal Render Pipeline/Lit");
         if (s == null) s = Shader.Find("Universal Render Pipeline/Unlit");
-        if (s == null) s = Shader.Find("Unlit/Color");
         if (s == null) s = Shader.Find("Sprites/Default");
         if (s == null) s = Shader.Find("Standard");
+        if (s == null) s = fallbackPrimitiveShader;
+        return s;
+    }
 
-        Material mat = new Material(s);
-        Color asphalt = new Color(0.12f, 0.12f, 0.14f, 1f); // Dark industrial asphalt
-        mat.color = asphalt;
-        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", asphalt);
-        if (mat.HasProperty("_Color")) mat.SetColor("_Color", asphalt);
-        mat.name = "RoadAsphalt_" + roadId;
+    Material CreateSafeRoadMaterial(Color col, bool preferUnlit, int queueOffset, string matName)
+    {
+        Shader s = GetSafeRoadShader(preferUnlit);
+        Material mat;
+        if (s != null)
+        {
+            mat = new Material(s);
+        }
+        else if (roadSurface != null && roadSurface.GetComponent<Renderer>() != null && roadSurface.GetComponent<Renderer>().sharedMaterial != null)
+        {
+            mat = new Material(roadSurface.GetComponent<Renderer>().sharedMaterial);
+        }
+        else
+        {
+            mat = new Material(Shader.Find("Sprites/Default"));
+        }
+
+        mat.name = matName;
+        mat.color = col;
+        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", col);
+        if (mat.HasProperty("_Color")) mat.SetColor("_Color", col);
+        if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+        if (preferUnlit && mat.HasProperty("_EmissionColor"))
+        {
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", col * 0.45f);
+        }
+        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry + queueOffset;
         return mat;
+    }
+
+    Material CreateRoadMaterial()
+    {
+        Color asphalt = normalColor; // Dark industrial asphalt
+        return CreateSafeRoadMaterial(asphalt, false, 10, "RoadAsphalt_" + roadId);
     }
 
     private Material cachedYellowMat;
@@ -137,47 +240,38 @@ public class DraggableRoad : MonoBehaviour
     {
         if (cachedYellowMat == null)
         {
-            Shader s = Shader.Find("Universal Render Pipeline/Unlit");
-            if (s == null) s = Shader.Find("Unlit/Color");
-            if (s == null) s = Shader.Find("Standard");
-
-            cachedYellowMat = new Material(s);
             Color brightYellow = new Color(1.0f, 0.88f, 0.0f, 1.0f);
-            cachedYellowMat.color = brightYellow;
-            if (cachedYellowMat.HasProperty("_BaseColor")) cachedYellowMat.SetColor("_BaseColor", brightYellow);
+            cachedYellowMat = CreateSafeRoadMaterial(brightYellow, true, 20, "RoadYellowMat");
         }
         return cachedYellowMat;
     }
 
+    private Material cachedWhiteMat;
+    private Material GetWhiteDashMaterial()
+    {
+        if (cachedWhiteMat == null)
+        {
+            Color pureWhite = new Color(1.0f, 1.0f, 1.0f, 1.0f);
+            cachedWhiteMat = CreateSafeRoadMaterial(pureWhite, true, 30, "RoadWhiteDashMat");
+        }
+        return cachedWhiteMat;
+    }
+
+    void RemoveChildColliderSafe(GameObject obj)
+    {
+        if (obj == null) return;
+        Collider col = obj.GetComponent<Collider>();
+        if (col != null)
+        {
+            col.enabled = false;
+            if (Application.isPlaying) Destroy(col);
+            else DestroyImmediate(col);
+        }
+    }
+
     void CreateYellowEdgeMarkings(float roadThickness)
     {
-        GameObject sideMarkingsGroup = new GameObject("YellowEdgeMarkings");
-        sideMarkingsGroup.transform.SetParent(transform);
-        sideMarkingsGroup.transform.localPosition = Vector3.zero;
-
-        Material yellowMat = GetYellowBorderMaterial();
-
-        float lineThick = 0.35f;
-        float lineY = roadThickness + 0.02f;
-        float halfWidth = roadWidth / 2f - (lineThick / 2f);
-
-        // Garis pinggir kiri (West/Left edge)
-        GameObject leftLine = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        leftLine.name = "YellowEdgeLeft";
-        leftLine.transform.SetParent(sideMarkingsGroup.transform);
-        leftLine.transform.localPosition = new Vector3(-halfWidth, lineY, 0);
-        leftLine.transform.localScale = new Vector3(lineThick, 0.02f, roadLength);
-        DestroyImmediate(leftLine.GetComponent<Collider>());
-        leftLine.GetComponent<Renderer>().sharedMaterial = yellowMat;
-
-        // Garis pinggir kanan (East/Right edge)
-        GameObject rightLine = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightLine.name = "YellowEdgeRight";
-        rightLine.transform.SetParent(sideMarkingsGroup.transform);
-        rightLine.transform.localPosition = new Vector3(halfWidth, lineY, 0);
-        rightLine.transform.localScale = new Vector3(lineThick, 0.02f, roadLength);
-        DestroyImmediate(rightLine.GetComponent<Collider>());
-        rightLine.GetComponent<Renderer>().sharedMaterial = yellowMat;
+        // Jalan tidak memerlukan garis tepi kuning (yellow edge markings)
     }
 
     void CreateDashedLine(float roadThickness)
@@ -185,22 +279,16 @@ public class DraggableRoad : MonoBehaviour
         dashContainer = new GameObject("DashLines");
         dashContainer.transform.SetParent(transform);
         dashContainer.transform.localPosition = Vector3.zero;
+        dashContainer.transform.localRotation = Quaternion.identity;
 
-        // Material garis putih
-        Shader s = Shader.Find("Universal Render Pipeline/Unlit");
-        if (s == null) s = Shader.Find("Unlit/Color");
-        if (s == null) s = Shader.Find("Standard");
+        Material dashMat = GetWhiteDashMaterial();
 
-        Material dashMat = new Material(s);
-        Color white = new Color(0.95f, 0.95f, 0.95f, 1f);
-        dashMat.color = white;
-        if (dashMat.HasProperty("_BaseColor")) dashMat.SetColor("_BaseColor", white);
-        dashMat.name = "DashLine_Road_" + roadId;
-
-        float dashLen = 3.0f;
-        float gapLen = 3.0f;
+        float dashLen = 3.5f;   // Panjang strip marka 3.5 meter
+        float gapLen = 2.5f;    // Jarak sela antar marka 2.5 meter
         float step = dashLen + gapLen;
-        float lineY = roadThickness + 0.02f;
+        float lineWidth = 0.45f; // Lebar garis putih 45cm (terlihat sangat kontras dan jelas dari jauh)
+        float lineHeight = 0.025f; // Tebal strip 2.5cm di atas permukaan aspal
+        float lineY = roadThickness + (lineHeight / 2f) + 0.003f;
 
         for (float dist = -roadLength / 2f + 1.0f; dist < roadLength / 2f - 1.0f; dist += step)
         {
@@ -212,10 +300,9 @@ public class DraggableRoad : MonoBehaviour
             dash.transform.SetParent(dashContainer.transform);
             dash.transform.localPosition = new Vector3(0, lineY, dist + actualLen / 2f);
             dash.transform.localRotation = Quaternion.identity;
-            dash.transform.localScale = new Vector3(0.3f, 0.02f, actualLen);
+            dash.transform.localScale = new Vector3(lineWidth, lineHeight, actualLen);
 
-            Collider col = dash.GetComponent<Collider>();
-            if (col != null) DestroyImmediate(col);
+            RemoveChildColliderSafe(dash);
 
             Renderer rend = dash.GetComponent<Renderer>();
             if (rend != null) rend.sharedMaterial = dashMat;
@@ -226,19 +313,14 @@ public class DraggableRoad : MonoBehaviour
     {
         arrowIndicator = new GameObject("DirectionArrow");
         arrowIndicator.transform.SetParent(transform);
-        
-        float lineY = roadThickness + 0.04f;
+        arrowIndicator.transform.localRotation = Quaternion.identity;
+
+        float arrowHeight = 0.025f;
+        float lineY = roadThickness + (arrowHeight / 2f) + 0.005f;
         arrowIndicator.transform.localPosition = new Vector3(0, lineY, 0);
 
-        Shader s = Shader.Find("Universal Render Pipeline/Unlit");
-        if (s == null) s = Shader.Find("Unlit/Color");
-        if (s == null) s = Shader.Find("Standard");
-
-        Material arrowMat = new Material(s);
         Color arrowColor = new Color(0.1f, 0.85f, 0.3f, 1f);
-        arrowMat.color = arrowColor;
-        if (arrowMat.HasProperty("_BaseColor")) arrowMat.SetColor("_BaseColor", arrowColor);
-        arrowMat.name = "ArrowMat_Road_" + roadId;
+        Material arrowMat = CreateSafeRoadMaterial(arrowColor, true, 40, "ArrowMat_Road_" + roadId);
 
         // Arrow body
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -246,9 +328,8 @@ public class DraggableRoad : MonoBehaviour
         body.transform.SetParent(arrowIndicator.transform);
         body.transform.localPosition = new Vector3(0, 0, -1.2f);
         body.transform.localRotation = Quaternion.identity;
-        body.transform.localScale = new Vector3(0.6f, 0.02f, 3.5f);
-        Collider bodyCol = body.GetComponent<Collider>();
-        if (bodyCol != null) DestroyImmediate(bodyCol);
+        body.transform.localScale = new Vector3(0.6f, arrowHeight, 3.5f);
+        RemoveChildColliderSafe(body);
         body.GetComponent<Renderer>().sharedMaterial = arrowMat;
 
         // Arrow head - left wing
@@ -257,9 +338,8 @@ public class DraggableRoad : MonoBehaviour
         leftWing.transform.SetParent(arrowIndicator.transform);
         leftWing.transform.localPosition = new Vector3(-0.8f, 0, 0.8f);
         leftWing.transform.localRotation = Quaternion.Euler(0, -40, 0);
-        leftWing.transform.localScale = new Vector3(0.6f, 0.02f, 2.2f);
-        Collider lwCol = leftWing.GetComponent<Collider>();
-        if (lwCol != null) DestroyImmediate(lwCol);
+        leftWing.transform.localScale = new Vector3(0.6f, arrowHeight, 2.2f);
+        RemoveChildColliderSafe(leftWing);
         leftWing.GetComponent<Renderer>().sharedMaterial = arrowMat;
 
         // Arrow head - right wing
@@ -268,33 +348,34 @@ public class DraggableRoad : MonoBehaviour
         rightWing.transform.SetParent(arrowIndicator.transform);
         rightWing.transform.localPosition = new Vector3(0.8f, 0, 0.8f);
         rightWing.transform.localRotation = Quaternion.Euler(0, 40, 0);
-        rightWing.transform.localScale = new Vector3(0.6f, 0.02f, 2.2f);
-        Collider rwCol = rightWing.GetComponent<Collider>();
-        if (rwCol != null) DestroyImmediate(rwCol);
+        rightWing.transform.localScale = new Vector3(0.6f, arrowHeight, 2.2f);
+        RemoveChildColliderSafe(rightWing);
         rightWing.GetComponent<Renderer>().sharedMaterial = arrowMat;
     }
 
     void CreateLabel(float roadThickness)
     {
-        labelObj = new GameObject("RoadLabel_" + roadId);
-        labelObj.transform.SetParent(transform);
-        
-        float lineY = roadThickness + 0.06f;
-        labelObj.transform.localPosition = new Vector3(0, lineY, -roadLength / 2f + 3f);
-        labelObj.transform.localRotation = Quaternion.Euler(90, 0, 0);
-
-        TMPro.TextMeshPro tmp = labelObj.AddComponent<TMPro.TextMeshPro>();
-        tmp.text = "ROAD " + roadId + " (" + roadWidth + "m x " + roadLength + "m)";
-        tmp.fontSize = 12;
-        tmp.fontStyle = TMPro.FontStyles.Bold;
-        tmp.alignment = TMPro.TextAlignmentOptions.Center;
-        tmp.color = new Color(0.3f, 0.85f, 1f, 1f);
-        if (Application.isPlaying)
+        try
         {
-            tmp.outlineWidth = 0.25f;
-            tmp.outlineColor = Color.black;
+            labelObj = new GameObject("RoadLabel_" + roadId);
+            labelObj.transform.SetParent(transform);
+
+            float lineY = roadThickness + 0.04f;
+            labelObj.transform.localPosition = new Vector3(0, lineY, -roadLength / 2f + 3f);
+            labelObj.transform.localRotation = Quaternion.Euler(90, 0, 0);
+
+            TMPro.TextMeshPro tmp = labelObj.AddComponent<TMPro.TextMeshPro>();
+            tmp.text = "ROAD " + roadId + " (" + roadWidth + "m x " + roadLength + "m)";
+            tmp.fontSize = 12;
+            tmp.fontStyle = TMPro.FontStyles.Bold;
+            tmp.alignment = TMPro.TextAlignmentOptions.Center;
+            tmp.color = new Color(0.3f, 0.85f, 1f, 1f);
+            tmp.rectTransform.sizeDelta = new Vector2(25f, 6f);
         }
-        tmp.rectTransform.sizeDelta = new Vector2(25f, 6f);
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[DraggableRoad] Label warning: " + ex.Message);
+        }
     }
 
     // --- Selection ---
@@ -324,6 +405,7 @@ public class DraggableRoad : MonoBehaviour
     public void UpdateDrag(Vector3 mouseWorldPos)
     {
         if (!isDragging) return;
+        FindGroundY();
 
         Vector3 newPos = mouseWorldPos + dragOffset;
         newPos.y = groundY;
