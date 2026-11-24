@@ -2,7 +2,7 @@
 
 > **Versi Engine:** Unity `6000.2.14f1` (Unity 6.2 LTS — Universal Render Pipeline / URP 17.2.0)  
 > **Target Platform:** WebGL (Desktop Browser, Mobile Browser, WebXR / Split-Screen VR Headset) & PC Standalone  
-> **Active Scene Utama:** `Assets/Scenes/pre1eagle.unity`  
+> **Active Scene Utama:** `Assets/Scenes/Copy.unity`  
 > **Repository / Project Root:** `Reality Eagle`
 
 ---
@@ -145,7 +145,8 @@ flowchart TD
 Reality Eagle/
 ├── Assets/
 │   ├── Scenes/
-│   │   ├── pre1eagle.unity                  # [SCENE UTAMA] Scene aktif untuk development & build WebGL
+│   │   ├── Copy.unity                       # [SCENE UTAMA] Scene aktif untuk development & build WebGL
+│   │   ├── pre1eagle.unity                  # Scene cadangan
 │   │   └── SampleScene.unity                # Scene referensi lama (DILARANG DIMODIFIKASI)
 │   ├── Scripts/
 │   │   ├── YardEditor/                      # Modul utama Interactive Yard Editor
@@ -345,7 +346,7 @@ Agar proses build WebGL selesai dengan cepat (**1–3 menit**, bukan 1 jam), pro
 1. Buka proyek di **Unity 6 (`6000.2.14f1`)**.
 2. Buka menu **`File -> Build Profiles`** (atau **`File -> Build Settings`**).
 3. Pastikan platform aktif adalah **WebGL**.
-4. Pada daftar **Scene List**, pastikan **hanya** `Assets/Scenes/pre1eagle.unity` yang dicentang.
+4. Pada daftar **Scene List**, pastikan **hanya** `Assets/Scenes/Copy.unity` yang dicentang.
    > **Peringatan Penting:** Jangan pernah memodifikasi atau menghapus `Assets/Scenes/SampleScene.unity`. Biarkan scene tersebut tetap utuh sebagai arsip referensi.
 5. Pastikan di **`Edit -> Project Settings -> Player -> WebGL -> Resolution and Presentation`**, opsi **WebGL Template** memilih **`PROJECT:WebXRFullView2020`**.
 6. Klik tombol **Build** dan pilih folder output (misalnya `C:\Users\RAFFIFADLIKA\YardEditor_WEBGL`).
